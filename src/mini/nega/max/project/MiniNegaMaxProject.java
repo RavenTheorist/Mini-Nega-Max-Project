@@ -3,7 +3,7 @@ package mini.nega.max.project;
 import mini.nega.max.project.Visualization.Frame;
 
 /**
- * Project's Main Class
+ * Project's Main Class Implementation
  * 
  * @author Amine Elkhalsi <aminekhalsi@hotmail.com>
  * 

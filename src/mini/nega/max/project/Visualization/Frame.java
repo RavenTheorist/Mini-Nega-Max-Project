@@ -1,14 +1,10 @@
 package mini.nega.max.project.Visualization;
 
 import java.awt.Color;
-import java.awt.Image;
-import java.io.File;
-import java.io.IOException;
-import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
 /**
- * Frame Class
+ * Frame Class Implementation
  * 
  * @author Amine Elkhalsi <aminekhalsi@hotmail.com>
  */
@@ -29,7 +25,7 @@ public class Frame extends JFrame
     public Frame()
     {
         // Set frame parameters
-        this.panel = new Panel();
+        this.panel = new Panel(3);
         this.setSize(300, 300);
         this.setAlwaysOnTop(true);
         this.setBackground(Color.black);

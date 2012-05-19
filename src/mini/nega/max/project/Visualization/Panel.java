@@ -2,15 +2,17 @@ package mini.nega.max.project.Visualization;
 
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridLayout;
 import java.awt.Image;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 
 /**
- * Content Panel Class
+ * Content Panel Class Implementation
  * 
  * @author Amine Elkhalsi <aminekhalsi@hotmail.com>
  */
@@ -20,7 +22,11 @@ public class Panel extends JPanel
      * Panel Attributes
      */
     
-    JButton button;
+    // m is the dimension of the board
+    private int m;
+    
+    // Every button represents a square
+    private ArrayList<Square> squares;
     private Image img;
     
     
@@ -29,13 +35,26 @@ public class Panel extends JPanel
      * Constructors
      */
     
-    public Panel()
+    public Panel(int m)
     {
+        // Panel initialization
+        this.m = m;
+        
+        // Open an image to put it as a background image
         try
         {
             img = ImageIO.read(new File("back.png"));
         }
         catch (IOException e){}
+        
+        // Set a grid layout to Panel
+        this.setLayout(new GridLayout(this.m, this.m));
+                
+        // Add all squares to Panel
+        for (int i = 0 ; i < sqr(this.m) ; i++)
+        {
+            this.add(new Square());
+        }
     }
     
     
@@ -48,11 +67,48 @@ public class Panel extends JPanel
     @Override
     public void paintComponent(Graphics g)
     {
-        
+        // We need a Graphics2D
         Graphics2D g2d = (Graphics2D)g;
         
-        
-        
+        // Set the background image
         g2d.drawImage(img, 0, 0, this.getWidth(), this.getHeight(), this);
+        
+        
+    }
+
+    
+    /*
+     * Internal Methods
+     */
+    
+    private int sqr(int m)
+    {
+        return (m * m);
+    }
+    
+    
+    
+    /*
+     * Getters and Setters
+     */
+    
+    public int getM()
+    {
+        return m;
+    }
+
+    public void setM(int m)
+    {
+        this.m = m;
+    }
+
+    public ArrayList<Square> getSquares()
+    {
+        return squares;
+    }
+
+    public void setSquares(ArrayList<Square> squares)
+    {
+        this.squares = squares;
     }
 }
