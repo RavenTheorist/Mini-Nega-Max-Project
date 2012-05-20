@@ -4,11 +4,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
@@ -17,7 +14,7 @@ import javax.swing.JPanel;
  * 
  * @author Amine Elkhalsi <aminekhalsi@hotmail.com>
  */
-public class Panel extends JPanel implements KeyListener
+public class Panel extends JPanel
 {
     /*
      * Panel Attributes
@@ -27,7 +24,8 @@ public class Panel extends JPanel implements KeyListener
     private int m;
     
     // Every button represents a square
-    private ArrayList<Square> squares;
+    //private ArrayList<Square> squares;
+    private Square[][] squares;
     private Image img;
     
     
@@ -40,7 +38,6 @@ public class Panel extends JPanel implements KeyListener
     {
         // Panel initialization
         this.m = m;
-        this.addKeyListener(this);
         
         // Open an image to put it as a background image
         try
@@ -54,12 +51,20 @@ public class Panel extends JPanel implements KeyListener
         
         // Draw the main grid
         // Add all squares to Panel
-        this.squares = new ArrayList<>();
-        for (int i = 0 ; i < sqr(this.m) ; i++)
+        this.squares = new Square[m][m];
+        int j = 0;
+        int k = 0;
+        for (int i = 1 ; i <= sqr(this.m) ; i++)
         {
             Square square = new Square();
             this.add(square);
-            this.squares.add(square);
+            this.squares[k][j] = square;
+            j++;
+            if ((i % m) == 0)
+            {
+                j = 0;
+                k++;
+            }
         }
     }
     
@@ -106,35 +111,11 @@ public class Panel extends JPanel implements KeyListener
         this.m = m;
     }
 
-    public ArrayList<Square> getSquares()
-    {
+    public Square[][] getSquares() {
         return squares;
     }
 
-    public void setSquares(ArrayList<Square> squares)
-    {
+    public void setSquares(Square[][] squares) {
         this.squares = squares;
-    }
-
-    @Override
-    public void keyTyped(KeyEvent e)
-    {
-        
-    }
-
-    @Override
-    public void keyPressed(KeyEvent e)
-    {
-        if (e.getKeyCode() == KeyEvent.VK_UP)
-        {
-            System.out.println("salut!");
-            this.squares.get(2).setState("nought");
-            this.repaint();
-        }
-    }
-
-    @Override
-    public void keyReleased(KeyEvent e) {
-        
     }
 }
