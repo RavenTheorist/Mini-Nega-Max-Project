@@ -40,5 +40,7 @@ public class Frame extends JFrame
         
         // Set the frame visible
         this.setVisible(true);
+        
+        this.setFocusable(false);
     }
 }
