@@ -1,9 +1,6 @@
 package mini.nega.max.project.Visualization;
 
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.GridLayout;
-import java.awt.Image;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
@@ -111,11 +108,13 @@ public class Panel extends JPanel
         this.m = m;
     }
 
-    public Square[][] getSquares() {
+    public Square[][] getSquares()
+    {
         return squares;
     }
 
-    public void setSquares(Square[][] squares) {
+    public void setSquares(Square[][] squares)
+    {
         this.squares = squares;
     }
 }

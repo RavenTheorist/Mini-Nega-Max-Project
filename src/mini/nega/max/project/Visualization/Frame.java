@@ -61,10 +61,30 @@ public class Frame extends JFrame
         // First test, when player plays, computer will play at the central square
         while(true)
         {
-            System.out.println(f(this.panel.getSquares()));
+            if (!isHumanTurn())
+            {
+                Square tempSquares[][] = playNext(this.panel.getSquares());
+                if (tempSquares != null)
+                    this.panel.setSquares(tempSquares);
+            }
+            
+            SimpleDialog dlg = null;
+            switch (f(this.panel.getSquares()))
+            {
+                case 0 :
+                    dlg = new SimpleDialog(this, "And the winner is...", "Draw !");
+                    resetGame();
+                    break;
+                case 1 :
+                    dlg = new SimpleDialog(this, "And the winner is...", "Computer won !");
+                    resetGame();
+                    break;
+                case -1 :
+                    dlg = new SimpleDialog(this, "And the winner is...", "You won !!!");
+                    resetGame();
+                    break;
+            }
         }
-        //play(1, 1);
-        
     }
     
     // This method plays a nought at the indicated line and column
@@ -74,6 +94,50 @@ public class Frame extends JFrame
         squares[line][column].setState("nought");
         this.panel.setSquares(squares);
         this.panel.repaint();
+    }
+    
+    // This method plays a nought in the next empty square
+    private Square[][] playNext(Square[][] node)
+    {
+        Square squares[][] = node;
+        
+        // For each line
+        for (int l = 0; l < this.panel.getM(); l++)
+        {
+            // And for each sqaure in each line
+            for (int c = 0; c < this.panel.getM(); c++)
+            {
+                // If it's an empty square
+                if (squares[l][c].getState().equals(""))
+                {
+                    squares[l][c].setState("nought");
+                    this.panel.setSquares(squares);
+                    this.panel.repaint();
+                    return squares;
+                }
+            }
+        }
+        
+        // There is no empty space !
+        return null;
+    }
+    
+    // This game reinitilizes the game to the starting point
+    private void resetGame()
+    {
+        Square squares[][] = this.panel.getSquares();
+        // For each line
+        for (int l = 0; l < this.panel.getM(); l++)
+        {
+            // And for each sqaure in each line
+            for (int c = 0; c < this.panel.getM(); c++)
+            {
+                // Make it empty
+                squares[l][c].setState("");
+            }
+        }
+        
+        this.panel.setSquares(squares);
     }
     
     // Return true if the reached state corresponds to a leaf
@@ -312,7 +376,7 @@ public class Frame extends JFrame
         return 99;
     }
     
-    // This method returns the number of crosses X played in the game
+    // This method returns the number of crosses (X) played in the game
     private int countXInGame()
     {
         int counter = 0;
@@ -333,11 +397,32 @@ public class Frame extends JFrame
         return counter;
     }
     
+    // This method returns the number of noughts (O) played in the game
+    private int countOInGame()
+    {
+        int counter = 0;
+        Square squares[][] = this.panel.getSquares();
+        
+        // For each line
+        for (int l = 0; l < this.panel.getM(); l++)
+        {
+            // And for each column
+            for (int c = 0; c < this.panel.getM(); c++)
+            {
+                // If you find a nought, then increment the counter
+                if (squares[l][c].getState().equals("nought"))
+                    counter++;
+            }
+        }
+        
+        return counter;
+    }
+    
     // This method tells if it's the human's turn or not
     private boolean isHumanTurn()
     {
-        // Count how many times the human played
-        int xPlayed = countXInGame();
+        // Count how many times both players played
+        int xPlayed = countXInGame() + countOInGame();
         
         // If it's an even number, then it means that it's still the human's turn
         if (xPlayed % 2 == 0)
