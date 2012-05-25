@@ -24,7 +24,6 @@ public class Panel extends JPanel
     private int m;
     
     // Every button represents a square
-    //private ArrayList<Square> squares;
     private Square[][] squares;
     private Image img;
     
@@ -50,10 +49,10 @@ public class Panel extends JPanel
         this.setLayout(new GridLayout(this.m, this.m));
         
         // Draw the main grid
-        // Add all squares to Panel
         this.squares = new Square[m][m];
         int j = 0;
         int k = 0;
+        // Add all squares to Panel
         for (int i = 1 ; i <= sqr(this.m) ; i++)
         {
             Square square = new Square();
@@ -90,6 +89,7 @@ public class Panel extends JPanel
      * Internal Methods
      */
     
+    // Calcultates the square of a number
     private int sqr(int m)
     {
         return (m * m);
