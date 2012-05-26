@@ -22,6 +22,8 @@ public class Frame extends JFrame
     // True if the player already played its turn, else false
     private boolean played;
     
+    
+    
     /*
      * Constructors
      */
@@ -30,7 +32,7 @@ public class Frame extends JFrame
     {
         // Set frame parameters
         this.played = false;
-        this.panel = new Panel(3);
+        this.panel = new Panel(4);
         this.setSize(300, 300);
         this.setBackground(Color.black);
         this.setLocationRelativeTo(null);
@@ -55,7 +57,7 @@ public class Frame extends JFrame
      * Main Loop + Mini-Max Algorithm Implementation
      */
     
-    // Frame Main Loop
+    // Frame Main Loop : Here is where the flow of play is been implemented
     private void loop()
     {
         while(true)
@@ -92,49 +94,67 @@ public class Frame extends JFrame
     // Decide which is the best position to play... then play it !
     private void minMaxDecision(Square[][] givenSquares)
     {
-        // Get the given squares
-        Square[][] squares = givenSquares;
-        
-        // This array list, as the name implies, will contain all the returned values of the minMaxAlgorithm
-        ArrayList<Integer> minMaxValues = new ArrayList<>();
-        ArrayList<Square[][]> minMaxMoves = new ArrayList<>();
-        
-        // For each possible move to play
+        // Get a copy of the given squares
+        Square squares2[][] = givenSquares;
+        Square squares[][] = new Square[this.panel.getM()][this.panel.getM()];
         for (int l = 0; l < this.panel.getM(); l++)
         {
             for (int c = 0; c < this.panel.getM(); c++)
             {
+                Square s = new Square(givenSquares[l][c].getState());
+                squares[l][c] = s;
+            }
+        }
+        
+        // These array lists, as their respective names implies, will contain all the returned values of the minMaxAlgorithm
+        ArrayList<Integer> values = new ArrayList<>();
+        ArrayList<Square[][]> moves = new ArrayList<>();
+        ArrayList<Integer> lines = new ArrayList<>();
+        ArrayList<Integer> cols = new ArrayList<>();
+        
+        // For each possible move to play
+        for (int l = 0 ; l < this.panel.getM() ; l++)
+        {
+            for (int c = 0 ; c < this.panel.getM() ; c++)
+            {
                 // Empty square == New possible move
                 if (squares[l][c].getState().equals(""))
                 {
-                    // We need to save every move with each corresponding Min-Max return value
-                    Square[][] tempSquares = play(l, c, squares);
+                    // We need to save every move with every corresponding Min-Max return value
+                    Square tempSquares[][];
+                    tempSquares = play(l, c, squares);
                     
-                    minMaxMoves.add(tempSquares);
-                    minMaxValues.add(minMaxValue(tempSquares, false));
+                    moves.add(tempSquares);
+                    values.add(minMaxValue(tempSquares, false));
+                    
+                    cols.add(c);
+                    lines.add(l);
                 }
             }
         }
         
         // Calculate the maximal move value
-        int maxValue = -99;
+        int maxValue = values.get(0);
         int maxValueIndex = 0;
-        for (int i = 0; i < minMaxValues.size(); i++)
+        for (int i = 1 ; i < values.size() ; i++)
         {
-            if (minMaxValues.get(i) > maxValue)
+            if (values.get(i) > maxValue)
             {
-                maxValue = minMaxValues.get(i);
+                maxValue = values.get(i);
                 maxValueIndex = i;
             }
         }
         
-        if (maxValueIndex != 0)
-            this.panel.setSquares(minMaxMoves.get(maxValueIndex));
+        // Play if there is a possible move
+        play2(lines.get(maxValueIndex),cols.get(maxValueIndex), squares2);
+        
+        // Repaint the frame
         this.repaint();
     }
     
     private int minMaxValue(Square[][] node, boolean isMaxNode)
     {
+        // If the current given node is a leaf, return it's f(node) value
         if (isLeaf(node))
             return f(node);
         else
@@ -165,55 +185,41 @@ public class Frame extends JFrame
         return 0;
     }
     
-    private int minOf(ArrayList<Integer> vals)
-    {
-        if (!vals.isEmpty())
-        {
-        // Save first value
-        int min = vals.get(0);
-        
-        // Compare it to all other values stored in vals
-        for (int i = 1 ; i < vals.size() ; i++)
-        {
-            if (vals.get(i) < min)
-                min = vals.get(i);
-        }
-        
-        // Return the smallest value
-        return min;
-        }
-        return 0;
-    }
-    
-    private int maxOf(ArrayList<Integer> vals)
-    {
-        if (!vals.isEmpty())
-        {
-            // Save first value
-        int max = vals.get(0);
-        
-        // Compare it to all other values stored in vals
-        for (int i = 1 ; i < vals.size() ; i++)
-        {
-            if (vals.get(i) > max)
-                max = vals.get(i);
-        }
-        
-        // Return the biggest value
-        return max;
-        }
-        return 0;
-    }
-    
     
     
     /*
      * Internal Methods
      */
     
-    // This method plays a nought or a cross, depending on whose turn to play, at the indicated line and column
+    // MEMORY METHOD (makes copy of givenSquares) : This method plays a nought or a cross, depending on whose turn to play, at the indicated line and column
     private Square[][] play(int line, int column, Square[][] givenSquares)
     {
+        // First copy the grid
+        Square squares[][] = new Square[this.panel.getM()][this.panel.getM()];
+        for (int l = 0; l < this.panel.getM(); l++)
+        {
+            for (int c = 0; c < this.panel.getM(); c++)
+            {
+                Square s = new Square(givenSquares[l][c].getState());
+                squares[l][c] = s;
+            }
+        }
+        
+        // If it's human's turn, put a cross
+        if (isHumanTurn(squares))
+            squares[line][column].setState("cross");
+        // Else it's computer's turn, then put a nought
+        else
+            squares[line][column].setState("nought");
+        
+        // Return the new grid
+        return squares;
+    }
+    
+    // GRID METHOD (works directly on the givenSquares) : This method plays a nought or a cross, depending on whose turn to play, at the indicated line and column
+    private Square[][] play2(int line, int column, Square[][] givenSquares)
+    {
+        // First copy the grid
         Square squares[][] = givenSquares;
         
         // If it's human's turn, put a cross
@@ -230,7 +236,16 @@ public class Frame extends JFrame
     // This method plays a nought in the next empty square
     private Square[][] playNext(Square[][] node)
     {
-        Square squares[][] = node;
+        // First copy the grid
+        Square squares[][] = new Square[this.panel.getM()][this.panel.getM()];
+        for (int l = 0; l < this.panel.getM(); l++)
+        {
+            for (int c = 0; c < this.panel.getM(); c++)
+            {
+                Square s = new Square(node[l][c].getState());
+                squares[l][c] = s;
+            }
+        }
         
         // For each line
         for (int l = 0; l < this.panel.getM(); l++)
@@ -494,14 +509,14 @@ public class Frame extends JFrame
             for (int c = 0; c < this.panel.getM(); c++)
             {
                 // If there is a remaining empty square
-                if (squares[l][c].getState().equals(""))
+                if (!squares[l][c].getState().equals(""))
                     // The game still goes on => not a leaf
                     unfilledCounter++;
             }
         }
         
         // It's a draw !
-        if (unfilledCounter == this.panel.getM())
+        if (unfilledCounter == sqr(this.panel.getM()))
             return 0;
         
         // Else, it means it's NOT a leaf. 99 : Error => Calling f(node) for a node that is not a leaf
@@ -568,6 +583,48 @@ public class Frame extends JFrame
     private int sqr(int m)
     {
         return (m * m);
+    }
+    
+    // This method returns the min integer in a set of integers
+    private int minOf(ArrayList<Integer> vals)
+    {
+        if (!vals.isEmpty())
+        {
+        // Save first value
+        int min = vals.get(0);
+        
+        // Compare it to all other values stored in vals
+        for (int i = 1 ; i < vals.size() ; i++)
+        {
+            if (vals.get(i) < min)
+                min = vals.get(i);
+        }
+        
+        // Return the smallest value
+        return min;
+        }
+        return 0;
+    }
+    
+    // This method returns the max integer in a set of integers
+    private int maxOf(ArrayList<Integer> vals)
+    {
+        if (!vals.isEmpty())
+        {
+            // Save first value
+        int max = vals.get(0);
+        
+        // Compare it to all other values stored in vals
+        for (int i = 1 ; i < vals.size() ; i++)
+        {
+            if (vals.get(i) > max)
+                max = vals.get(i);
+        }
+        
+        // Return the biggest value
+        return max;
+        }
+        return 0;
     }
     
     

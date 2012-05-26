@@ -47,6 +47,21 @@ public class Square extends JButton implements MouseListener
         this.addMouseListener(this);
     }
     
+    public Square(String state)
+    {
+        this.state = state;
+        
+        // Open an image to put it as a background image
+        try
+        {
+            img = ImageIO.read(new File("back.png"));
+        }
+        catch (IOException e){}
+        
+        // Add the mouse listener
+        this.addMouseListener(this);
+    }
+    
     
     
     /*
@@ -107,14 +122,12 @@ public class Square extends JButton implements MouseListener
     @Override
     public void mouseEntered(MouseEvent e)
     {
-        this.state = this.state;
         repaint();
     }
 
     @Override
     public void mouseExited(MouseEvent e)
     {
-        this.state = this.state;
         repaint();
     }
     
