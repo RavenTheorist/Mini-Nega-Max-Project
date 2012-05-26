@@ -1,6 +1,7 @@
 package mini.nega.max.project.Visualization;
 
 import java.awt.Color;
+import java.util.ArrayList;
 import javax.swing.JFrame;
 
 /**
@@ -31,7 +32,6 @@ public class Frame extends JFrame
         this.played = false;
         this.panel = new Panel(3);
         this.setSize(300, 300);
-        this.setAlwaysOnTop(true);
         this.setBackground(Color.black);
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -52,23 +52,18 @@ public class Frame extends JFrame
     
     
     /*
-     * Internal Methods
+     * Main Loop + Mini-Max Algorithm Implementation
      */
     
     // Frame Main Loop
     private void loop()
     {
-        // First test, when player plays, computer will play at the central square
         while(true)
         {
-            if (!isHumanTurn())
-            {
-                Square tempSquares[][] = playNext(this.panel.getSquares());
-                if (tempSquares != null)
-                    this.panel.setSquares(tempSquares);
-            }
+            // If the actual game is a leaf <=> If the game reached its end
+            SimpleDialog dlg;
             
-            SimpleDialog dlg = null;
+            // Declare winner then reset the game
             switch (f(this.panel.getSquares()))
             {
                 case 0 :
@@ -80,20 +75,156 @@ public class Frame extends JFrame
                     resetGame();
                     break;
                 case -1 :
-                    dlg = new SimpleDialog(this, "And the winner is...", "You won !!!");
+                    dlg = new SimpleDialog(this, "And the winner is...", "YOU WON !!!");
                     resetGame();
                     break;
+            }
+            
+            // Everytime it's computer's turn
+            if (!isHumanTurn(this.panel.getSquares()))
+            {
+                // Call for Min-Max to play next move
+                minMaxDecision(this.panel.getSquares());
             }
         }
     }
     
-    // This method plays a nought at the indicated line and column
-    private void play(int line, int column)
+    // Decide which is the best position to play... then play it !
+    private void minMaxDecision(Square[][] givenSquares)
     {
-        Square squares[][] = this.panel.getSquares();
-        squares[line][column].setState("nought");
-        this.panel.setSquares(squares);
-        this.panel.repaint();
+        // Get the given squares
+        Square[][] squares = givenSquares;
+        
+        // This array list, as the name implies, will contain all the returned values of the minMaxAlgorithm
+        ArrayList<Integer> minMaxValues = new ArrayList<>();
+        ArrayList<Square[][]> minMaxMoves = new ArrayList<>();
+        
+        // For each possible move to play
+        for (int l = 0; l < this.panel.getM(); l++)
+        {
+            for (int c = 0; c < this.panel.getM(); c++)
+            {
+                // Empty square == New possible move
+                if (squares[l][c].getState().equals(""))
+                {
+                    // We need to save every move with each corresponding Min-Max return value
+                    Square[][] tempSquares = play(l, c, squares);
+                    
+                    minMaxMoves.add(tempSquares);
+                    minMaxValues.add(minMaxValue(tempSquares, false));
+                }
+            }
+        }
+        
+        // Calculate the maximal move value
+        int maxValue = -99;
+        int maxValueIndex = 0;
+        for (int i = 0; i < minMaxValues.size(); i++)
+        {
+            if (minMaxValues.get(i) > maxValue)
+            {
+                maxValue = minMaxValues.get(i);
+                maxValueIndex = i;
+            }
+        }
+        
+        if (maxValueIndex != 0)
+            this.panel.setSquares(minMaxMoves.get(maxValueIndex));
+        this.repaint();
+    }
+    
+    private int minMaxValue(Square[][] node, boolean isMaxNode)
+    {
+        if (isLeaf(node))
+            return f(node);
+        else
+        {
+            // This will contain the returned values of each node
+            ArrayList<Integer> vals = new ArrayList<>();
+            
+            // For each possible move from this point
+            for (int l = 0; l < this.panel.getM(); l++)
+            {
+                for (int c = 0; c < this.panel.getM(); c++)
+                {
+                    // Empty = Possible move
+                    if (node[l][c].getState().equals(""))
+                    {
+                        // Play the next possible move
+                        vals.add(minMaxValue(play(l, c, node), !isMaxNode));
+                    }
+                }
+                
+                // If it's about maximizing or minimizing
+                if (isMaxNode)
+                    return maxOf(vals);
+                else
+                    return minOf(vals);
+            }
+        }
+        return 0;
+    }
+    
+    private int minOf(ArrayList<Integer> vals)
+    {
+        if (!vals.isEmpty())
+        {
+        // Save first value
+        int min = vals.get(0);
+        
+        // Compare it to all other values stored in vals
+        for (int i = 1 ; i < vals.size() ; i++)
+        {
+            if (vals.get(i) < min)
+                min = vals.get(i);
+        }
+        
+        // Return the smallest value
+        return min;
+        }
+        return 0;
+    }
+    
+    private int maxOf(ArrayList<Integer> vals)
+    {
+        if (!vals.isEmpty())
+        {
+            // Save first value
+        int max = vals.get(0);
+        
+        // Compare it to all other values stored in vals
+        for (int i = 1 ; i < vals.size() ; i++)
+        {
+            if (vals.get(i) > max)
+                max = vals.get(i);
+        }
+        
+        // Return the biggest value
+        return max;
+        }
+        return 0;
+    }
+    
+    
+    
+    /*
+     * Internal Methods
+     */
+    
+    // This method plays a nought or a cross, depending on whose turn to play, at the indicated line and column
+    private Square[][] play(int line, int column, Square[][] givenSquares)
+    {
+        Square squares[][] = givenSquares;
+        
+        // If it's human's turn, put a cross
+        if (isHumanTurn(squares))
+            squares[line][column].setState("cross");
+        // Else it's computer's turn, then put a nought
+        else
+            squares[line][column].setState("nought");
+        
+        // Return the new grid
+        return squares;
     }
     
     // This method plays a nought in the next empty square
@@ -138,6 +269,7 @@ public class Frame extends JFrame
         }
         
         this.panel.setSquares(squares);
+        this.repaint();
     }
     
     // Return true if the reached state corresponds to a leaf
@@ -377,10 +509,10 @@ public class Frame extends JFrame
     }
     
     // This method returns the number of crosses (X) played in the game
-    private int countXInGame()
+    private int countXInGame(Square[][] givenSquares)
     {
         int counter = 0;
-        Square squares[][] = this.panel.getSquares();
+        Square squares[][] = givenSquares;
         
         // For each line
         for (int l = 0; l < this.panel.getM(); l++)
@@ -398,10 +530,10 @@ public class Frame extends JFrame
     }
     
     // This method returns the number of noughts (O) played in the game
-    private int countOInGame()
+    private int countOInGame(Square[][] givenSquares)
     {
         int counter = 0;
-        Square squares[][] = this.panel.getSquares();
+        Square squares[][] = givenSquares;
         
         // For each line
         for (int l = 0; l < this.panel.getM(); l++)
@@ -419,10 +551,10 @@ public class Frame extends JFrame
     }
     
     // This method tells if it's the human's turn or not
-    private boolean isHumanTurn()
+    private boolean isHumanTurn(Square[][] givenSquares)
     {
         // Count how many times both players played
-        int xPlayed = countXInGame() + countOInGame();
+        int xPlayed = countXInGame(givenSquares) + countOInGame(givenSquares);
         
         // If it's an even number, then it means that it's still the human's turn
         if (xPlayed % 2 == 0)
@@ -437,6 +569,7 @@ public class Frame extends JFrame
     {
         return (m * m);
     }
+    
     
     
     /*
