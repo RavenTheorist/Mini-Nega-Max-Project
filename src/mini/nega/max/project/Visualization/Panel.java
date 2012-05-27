@@ -1,6 +1,9 @@
 package mini.nega.max.project.Visualization;
 
-import java.awt.*;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridLayout;
+import java.awt.Image;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
@@ -22,6 +25,8 @@ public class Panel extends JPanel
     
     // Every button represents a square
     private Square[][] squares;
+    
+    // Panel's background image
     private Image img;
     
     

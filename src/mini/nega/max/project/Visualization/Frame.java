@@ -2,6 +2,7 @@ package mini.nega.max.project.Visualization;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Scanner;
 import javax.swing.JFrame;
 
 /**
@@ -19,9 +20,8 @@ public class Frame extends JFrame
     // Content panel of the frame
     private Panel panel;
     
-    // True if the player already played its turn, else false
-    private boolean played;
-    
+    // Maximal deph that the constructed tree can reach. Just for bigminmax and negamax algorithms
+    private int maxDeph;
     
     
     /*
@@ -31,7 +31,7 @@ public class Frame extends JFrame
     public Frame(int gridSize, String algorithm)
     {
         // Set frame parameters
-        this.played = false;
+        maxDeph = 0;
         this.panel = new Panel(gridSize);
         this.setSize(300, 300);
         this.setBackground(Color.black);
@@ -45,10 +45,33 @@ public class Frame extends JFrame
         this.setTitle("Mini-Nega Max");
         
         // Set the frame visible
-        this.setVisible(true);
-        
-        // Call Main Loop
-        loop(algorithm);
+        if ((algorithm.toLowerCase().equals("minmax")) || (algorithm.toLowerCase().equals("bigminmax")) || (algorithm.toLowerCase().equals("negamax")))
+        {
+            // If it's about the bigminmax or negamax algorithms that limits the size of the constructed tree
+            if (!(algorithm.toLowerCase().equals("minmax")))
+            {
+                int resp = 0;
+                while (resp <= 0)
+                {
+                    // So we need to ask for the maximal deph
+                    System.out.print("Please specify the maximal deph : ");
+                    Scanner sc = new Scanner(System.in);
+                    resp = sc.nextInt();
+                    this.maxDeph = resp;
+                }
+            }
+            
+            this.setVisible(true);
+            
+            // Call Main Loop
+            loop(algorithm);
+        }
+        else
+        {
+            // If the algorithm is unknown, show error
+            System.err.println("Warning : Specified algorithm is unknown !");
+            System.err.println("=> Value must be one of {\"minmax\", \"bigminmax\", \"negamax\"}");
+        }
     }
     
     
@@ -111,6 +134,9 @@ public class Frame extends JFrame
                     case "bigminmax":
                         minMaxDecision_withHeuristic(this.panel.getSquares());
                         break;
+                    case "negamax":
+                        negaMaxDecision(this.panel.getSquares());
+                        break;
                 }
             }
         }
@@ -120,11 +146,10 @@ public class Frame extends JFrame
     private void minMaxDecision(Square[][] givenSquares)
     {
         // Get a copy of the given squares
-        Square squares2[][] = givenSquares;
         Square squares[][] = new Square[this.panel.getM()][this.panel.getM()];
-        for (int l = 0; l < this.panel.getM(); l++)
+        for (int l = 0 ; l < this.panel.getM() ; l++)
         {
-            for (int c = 0; c < this.panel.getM(); c++)
+            for (int c = 0 ; c < this.panel.getM() ; c++)
             {
                 Square s = new Square(givenSquares[l][c].getState());
                 squares[l][c] = s;
@@ -133,88 +158,136 @@ public class Frame extends JFrame
         
         // These array lists, as their respective names implies, will contain all the returned values of the minMaxAlgorithm
         ArrayList<Integer> values = new ArrayList<>();
-        ArrayList<Square[][]> moves = new ArrayList<>();
         ArrayList<Integer> lines = new ArrayList<>();
         ArrayList<Integer> cols = new ArrayList<>();
+        
+        // We'll save the maximal returned value from the Min-Max algorithm
+        int alpha = Integer.MIN_VALUE;
+        int alphaResult;
         
         // For each possible move to play
         for (int l = 0 ; l < this.panel.getM() ; l++)
         {
             for (int c = 0 ; c < this.panel.getM() ; c++)
             {
-                // Empty square == New possible move
                 if (squares[l][c].getState().equals(""))
                 {
-                    // We need to save every move with every corresponding Min-Max return value
-                    Square tempSquares[][];
-                    tempSquares = play(l, c, squares);
+                    // Play the next possible move
+                    Square[][] tempSqr = play(l, c, squares);
+                    alphaResult = minMaxValue(tempSqr);
                     
-                    moves.add(tempSquares);
-                    values.add(minMaxValue(tempSquares, false));
+                    // Since we start from the source node, we have to maximize
+                    if (alphaResult > alpha)
+                    {
+                        alpha = alphaResult;
+                        values.add(alpha);
+                        cols.add(c);
+                        lines.add(l);
+                    }
                     
-                    cols.add(c);
-                    lines.add(l);
+                    // Cancel last simulated move
+                    squares[l][c].setState("");
                 }
             }
         }
         
-        // Calculate the maximal move value
-        int maxValue = values.get(0);
+        
+        // Calculate the maximal move value index
         int maxValueIndex = 0;
         for (int i = 1 ; i < values.size() ; i++)
         {
-            if (values.get(i) > maxValue)
+            if (values.get(i) == alpha)
             {
-                maxValue = values.get(i);
                 maxValueIndex = i;
             }
         }
         
-        // Play if there is a possible move
-        play2(lines.get(maxValueIndex),cols.get(maxValueIndex), squares2);
+        // Play it !
+        play2(lines.get(maxValueIndex),cols.get(maxValueIndex), givenSquares);
+        
+        // Show total simulated combinations
+        System.out.println("There were " + countPossibilities + " simulated moves combination.");
+        countPossibilities = 0;
         
         // Repaint the frame
         this.repaint();
     }
     
+    // Global variable that counts possibilities
+    int countPossibilities = 0;
+    
     // This is the Min-Max algorithm implementation
-    private int minMaxValue(Square[][] node, boolean isMaxNode)
+    private int minMaxValue(Square[][] node)
     {
+        countPossibilities++;
         // If the current given node is a leaf, return it's f(node) value
         if (isLeaf(node))
             return f(node);
         else
         {
-            // This will contain the returned values of each node
-            ArrayList<Integer> vals = new ArrayList<>();
-            
-            // For each possible move from this point
-            for (int l = 0; l < this.panel.getM(); l++)
-            {
-                for (int c = 0; c < this.panel.getM(); c++)
+                // If it's about minimizing
+                if (isHumanTurn(node))
                 {
-                    // Empty = Possible move
-                    if (node[l][c].getState().equals(""))
+                    int beta = Integer.MAX_VALUE;
+                    int betaResult;
+                    
+                    // For each possible move from this point
+                    for (int l = 0; l < this.panel.getM(); l++)
                     {
-                        // Play the next possible move
-                        vals.add(minMaxValue(play(l, c, node), !isMaxNode));
+                        for (int c = 0; c < this.panel.getM(); c++)
+                        {
+                            // Empty = Possible move
+                            if (node[l][c].getState().equals(""))
+                            {
+                                countPossibilities++;
+                                // Play the next possible move
+                                betaResult = minMaxValue(play(l, c, node));
+                                node[l][c].setState("");
+                                
+                                // If it's about maximizing or minimizing
+                                if (betaResult < beta)
+                                    beta = betaResult;
+                            }
+                        }
                     }
+                    return beta;
                 }
-                
-                // If it's about maximizing or minimizing
-                if (isMaxNode)
-                    return maxOf(vals);
+                // If it's about maximizing
                 else
-                    return minOf(vals);
-            }
+                {
+                    int alpha = Integer.MIN_VALUE;
+                    int alphaResult;
+                    
+                    // For each possible move from this point
+                    for (int l = 0; l < this.panel.getM(); l++)
+                    {
+                        for (int c = 0; c < this.panel.getM(); c++)
+                        {
+                            countPossibilities++;
+                            // Empty = Possible move
+                            if (node[l][c].getState().equals(""))
+                            {
+                                // Play the next possible move
+                                alphaResult = minMaxValue(play(l, c, node));
+                                node[l][c].setState("");
+                                
+                                // If it's about maximizing or minimizing
+                                if (alphaResult > alpha)
+                                    alpha = alphaResult;
+                            }
+                        }
+                    }
+                    return alpha;
+                }
         }
-        return 0;
     }
     
     // Nearly the same as the above, now we limit exploration using a heuristic
     // Decide which is the best position to play... then play it !
     private void minMaxDecision_withHeuristic(Square[][] givenSquares)
     {
+        countPossibilities++;
+        
         // Get a copy of the given squares
         Square squares2[][] = givenSquares;
         Square squares[][] = new Square[this.panel.getM()][this.panel.getM()];
@@ -229,7 +302,6 @@ public class Frame extends JFrame
         
         // These array lists, as their respective names implies, will contain all the returned values of the minMaxAlgorithm
         ArrayList<Integer> values = new ArrayList<>();
-        ArrayList<Square[][]> moves = new ArrayList<>();
         ArrayList<Integer> lines = new ArrayList<>();
         ArrayList<Integer> cols = new ArrayList<>();
         
@@ -242,14 +314,14 @@ public class Frame extends JFrame
                 if (squares[l][c].getState().equals(""))
                 {
                     // We need to save every move with every corresponding Min-Max return value
-                    Square tempSquares[][];
-                    tempSquares = play(l, c, squares);
+                    squares[l][c].setState("nought");
                     
-                    moves.add(tempSquares);
-                    values.add(minMaxValue_withHeuristic(tempSquares, false, 2));
-                    
+                    values.add(minMaxValue_withHeuristic(squares, this.maxDeph));
                     cols.add(c);
                     lines.add(l);
+                    
+                    // Cancel last simulated move
+                    squares[l][c].setState("");
                 }
             }
         }
@@ -269,14 +341,19 @@ public class Frame extends JFrame
         // Play if there is a possible move
         play2(lines.get(maxValueIndex),cols.get(maxValueIndex), squares2);
         
+        // Show total simulated combinations
+        System.out.println("There were " + countPossibilities + " simulated moves combination.");
+        countPossibilities = 0;
         
         // Repaint the frame
         this.repaint();
     }
     
     // This is the Min-Max algorithm implementation. Now we limit exploration using a heuristic method
-    private int minMaxValue_withHeuristic(Square[][] node, boolean isMaxNode, int pmax)
+    private int minMaxValue_withHeuristic(Square[][] node, int pmax)
     {
+        countPossibilities++;
+        
         // If the current given node is a leaf, return it's f(node) value
         if (isLeaf(node))
             return f(node);
@@ -290,8 +367,148 @@ public class Frame extends JFrame
             }
             else
             {
-                // This will contain the returned values of each node
-                ArrayList<Integer> vals = new ArrayList<>();
+                if (isHumanTurn(node))
+                {
+                    int beta = Integer.MAX_VALUE;
+                    int betaResult;
+                    
+                    // For each possible move from this point
+                    for (int l = 0; l < this.panel.getM(); l++)
+                    {
+                        for (int c = 0; c < this.panel.getM(); c++)
+                        {
+                            // Empty = Possible move
+                            if (node[l][c].getState().equals(""))
+                            {
+                                // Play the next possible move
+                                betaResult = minMaxValue_withHeuristic(play(l, c, node), pmax-1);
+                                node[l][c].setState("");
+                                
+                                // If it's about maximizing or minimizing
+                                if (betaResult < beta)
+                                    beta = betaResult;
+                            
+                                countPossibilities++;
+                            }
+                        }
+                    }
+                    return beta;
+                }
+                else
+                {
+                    int alpha = Integer.MIN_VALUE;
+                    int alphaResult;
+                    
+                    // For each possible move from this point
+                    for (int l = 0; l < this.panel.getM(); l++)
+                    {
+                        for (int c = 0; c < this.panel.getM(); c++)
+                        {
+                            // Empty = Possible move
+                            if (node[l][c].getState().equals(""))
+                            {
+                                // Play the next possible move
+                                alphaResult = minMaxValue_withHeuristic(play(l, c, node), pmax-1);
+                                node[l][c].setState("");
+                                
+                                // If it's about maximizing or minimizing
+                                if (alphaResult > alpha)
+                                    alpha = alphaResult;
+                                
+                                countPossibilities++;
+                            }
+                        }
+                    }
+                    return alpha;
+                }
+            }
+        }
+    }
+    
+    // NegaMaxDecision method. Decide which is the best position to play... then play it !
+    private void negaMaxDecision(Square[][] givenSquares)
+    {
+        // Get a copy of the given squares
+        Square squares2[][] = givenSquares;
+        Square squares[][] = new Square[this.panel.getM()][this.panel.getM()];
+        for (int l = 0; l < this.panel.getM(); l++)
+        {
+            for (int c = 0; c < this.panel.getM(); c++)
+            {
+                Square s = new Square(givenSquares[l][c].getState());
+                squares[l][c] = s;
+            }
+        }
+        
+        // These array lists, as their respective names implies, will contain all the returned values of the minMaxAlgorithm
+        ArrayList<Integer> values = new ArrayList<>();
+        ArrayList<Integer> lines = new ArrayList<>();
+        ArrayList<Integer> cols = new ArrayList<>();
+        
+        // For each possible move to play
+        for (int l = 0 ; l < this.panel.getM() ; l++)
+        {
+            for (int c = 0 ; c < this.panel.getM() ; c++)
+            {
+                // Empty square == New possible move
+                if (squares[l][c].getState().equals(""))
+                {
+                    // We need to save every move with every corresponding Min-Max return value
+                    squares[l][c].setState("nought");
+                    
+                    values.add(0 - negaMaxValue(squares, this.maxDeph));
+                    cols.add(c);
+                    lines.add(l);
+                    
+                    // Cancel last simulated move
+                    squares[l][c].setState("");
+                }
+            }
+        }
+        
+        // Calculate the maximal move value
+        int maxValue = values.get(0);
+        int maxValueIndex = 0;
+        for (int i = 1 ; i < values.size() ; i++)
+        {
+            if (values.get(i) > maxValue)
+            {
+                maxValue = values.get(i);
+                maxValueIndex = i;
+            }
+        }
+        
+        // Play if there is a possible move
+        play2(lines.get(maxValueIndex),cols.get(maxValueIndex), squares2);
+        
+        // Show total simulated combinations
+        System.out.println("There were " + countPossibilities + " simulated moves combination.");
+        countPossibilities = 0;
+        
+        // Repaint the frame
+        this.repaint();
+    }
+    
+    // This is the Nega-Max algorithm implementation. With heuristic and limited exploration
+    private int negaMaxValue(Square[][] node, int pmax)
+    {
+        countPossibilities++;
+        
+        // If the current given node is a leaf, return it's f(node) value
+        if (isLeaf(node))
+            return g(node);
+        else
+        {
+            // If limit reached and not a leaf
+            if (pmax == 0)
+            {
+                // Call heuristic method to estimate the current situation
+                return h(node);
+            }
+            else
+            {
+                int alpha = Integer.MIN_VALUE;
+                int alphaResult;
                 
                 // For each possible move from this point
                 for (int l = 0; l < this.panel.getM(); l++)
@@ -302,26 +519,166 @@ public class Frame extends JFrame
                         if (node[l][c].getState().equals(""))
                         {
                             // Play the next possible move
-                            vals.add(minMaxValue_withHeuristic(play(l, c, node), !isMaxNode, pmax-1));
+                            alphaResult = 0 - negaMaxValue(play(l, c, node), pmax-1);
+                            node[l][c].setState("");
+                            
+                            // Alway Maximize Negation
+                            if (alphaResult > alpha)
+                                alpha = alphaResult;
                         }
                     }
+                 }
+                countPossibilities++;
+                return alpha;
+            }
+        }
+    }
+    
+    /* Not started yet. There are some problems to fix first with the AI
+    // Nearly the same as the above, now we limit exploration using a heuristic
+    // Decide which is the best position to play... then play it !
+    private void alphaBetaDecision(Square[][] givenSquares)
+    {
+        countPossibilities++;
+        
+        // Get a copy of the given squares
+        Square squares2[][] = givenSquares;
+        Square squares[][] = new Square[this.panel.getM()][this.panel.getM()];
+        for (int l = 0; l < this.panel.getM(); l++)
+        {
+            for (int c = 0; c < this.panel.getM(); c++)
+            {
+                Square s = new Square(givenSquares[l][c].getState());
+                squares[l][c] = s;
+            }
+        }
+        
+        // These array lists, as their respective names implies, will contain all the returned values of the minMaxAlgorithm
+        ArrayList<Integer> values = new ArrayList<>();
+        ArrayList<Integer> lines = new ArrayList<>();
+        ArrayList<Integer> cols = new ArrayList<>();
+        
+        // For each possible move to play
+        for (int l = 0 ; l < this.panel.getM() ; l++)
+        {
+            for (int c = 0 ; c < this.panel.getM() ; c++)
+            {
+                // Empty square == New possible move
+                if (squares[l][c].getState().equals(""))
+                {
+                    // We need to save every move with every corresponding Min-Max return value
+                    squares[l][c].setState("nought");
                     
-                    // If it's about maximizing or minimizing
-                    if (isMaxNode)
-                        return maxOf(vals);
-                    else
-                        return minOf(vals);
+                    values.add(minMaxValue_withHeuristic(squares, this.maxDeph));
+                    cols.add(c);
+                    lines.add(l);
+                    
+                    // Cancel last simulated move
+                    squares[l][c].setState("");
                 }
             }
         }
-        return 0;
+        
+        // Calculate the maximal move value
+        int maxValue = values.get(0);
+        int maxValueIndex = 0;
+        for (int i = 1 ; i < values.size() ; i++)
+        {
+            if (values.get(i) > maxValue)
+            {
+                maxValue = values.get(i);
+                maxValueIndex = i;
+            }
+        }
+        
+        // Play if there is a possible move
+        play2(lines.get(maxValueIndex),cols.get(maxValueIndex), squares2);
+        
+        // Show total simulated combinations
+        System.out.println("There were " + countPossibilities + " simulated moves combination.");
+        countPossibilities = 0;
+        
+        // Repaint the frame
+        this.repaint();
     }
+    
+    // This is the Min-Max algorithm implementation. Now we limit exploration using a heuristic method
+    private int alphaBetaValue(Square[][] node, int pmax)
+    {
+        countPossibilities++;
+        
+        // If the current given node is a leaf, return it's f(node) value
+        if (isLeaf(node) && pmax == 0)
+            return f(node);
+        else
+        {
+                if (isHumanTurn(node))
+                {
+                    int beta = Integer.MAX_VALUE;
+                    int betaResult;
+                    
+                    // For each possible move from this point
+                    for (int l = 0; l < this.panel.getM(); l++)
+                    {
+                        for (int c = 0; c < this.panel.getM(); c++)
+                        {
+                            // Empty = Possible move
+                            if (node[l][c].getState().equals(""))
+                            {
+                                // Play the next possible move
+                                betaResult = minMaxValue_withHeuristic(play(l, c, node), pmax-1);
+                                node[l][c].setState("");
+                                
+                                // If it's about maximizing or minimizing
+                                if (betaResult < beta)
+                                    beta = betaResult;
+                            
+                                countPossibilities++;
+                            }
+                        }
+                    }
+                    return beta;
+                }
+                else
+                {
+                    int alpha = Integer.MIN_VALUE;
+                    int alphaResult;
+                    
+                    // For each possible move from this point
+                    for (int l = 0; l < this.panel.getM(); l++)
+                    {
+                        for (int c = 0; c < this.panel.getM(); c++)
+                        {
+                            // Empty = Possible move
+                            if (node[l][c].getState().equals(""))
+                            {
+                                // Play the next possible move
+                                alphaResult = minMaxValue_withHeuristic(play(l, c, node), pmax-1);
+                                node[l][c].setState("");
+                                
+                                // If it's about maximizing or minimizing
+                                if (alphaResult > alpha)
+                                    alpha = alphaResult;
+                                
+                                countPossibilities++;
+                            }
+                        }
+                    }
+                    return alpha;
+                }
+        }
+    }
+    */
+    
+    
+    
+    /*
+     * Internal Methods
+     */
     
     // This method returns an estimation of the situation of the computer at the reached state that corresponds to the given node
     private int h(Square[][] node)
     {
-        Square squares[][] = node;
-        
         /* Calculates h(node) when the actual game is a leaf if... */
         
         /* 
@@ -353,24 +710,24 @@ public class Frame extends JFrame
             for (int c = 0; c < this.panel.getM(); c++)
             {
                 // If the square contains a cross
-                if (squares[l][c].getState().equals("cross"))
+                if (node[l][c].getState().equals("cross"))
                     horizontalCrossesCounter++;
                 // Or if it contains a nought
-                if (squares[l][c].getState().equals("nought"))
+                if (node[l][c].getState().equals("nought"))
                     horizontalNoughtsCounter++;
                 
                 // We then do the same for columns
-                if (squares[c][l].getState().equals("cross"))
+                if (node[c][l].getState().equals("cross"))
                     verticalCrossesCounter++;
-                if (squares[c][l].getState().equals("nought"))
+                if (node[c][l].getState().equals("nought"))
                     verticalNoughtsCounter++;
                 
                 // ... same thing for diagonals (from TOP LEFT to BOTTOM RIGHT)
                 if (l == c)
                 {
-                    if (squares[l][c].getState().equals("cross"))
+                    if (node[l][c].getState().equals("cross"))
                         diagonalCrossesCounter++;
-                    if (squares[l][c].getState().equals("nought"))
+                    if (node[l][c].getState().equals("nought"))
                         diagonalNoughtsCounter++;
                 }
             }
@@ -403,9 +760,9 @@ public class Frame extends JFrame
         
         for (int i = 0 ; i < this.panel.getM() ; i++)
         {
-            if (squares[i][this.panel.getM() - i - 1].getState().equals("cross"))
+            if (node[i][this.panel.getM() - i - 1].getState().equals("cross"))
                 diagonalCrossesCounter++;
-            if (squares[i][this.panel.getM() - i - 1].getState().equals("nought"))
+            if (node[i][this.panel.getM() - i - 1].getState().equals("nought"))
                 diagonalNoughtsCounter++;    
         }
         
@@ -420,35 +777,25 @@ public class Frame extends JFrame
         return 0;
     }
     
-    
-    
-    /*
-     * Internal Methods
-     */
+    private int g(Square[][] node)
+    {
+        if(!isHumanTurn(node))
+            return f(node);
+        else
+            return -f(node);
+    }
     
     // MEMORY METHOD (makes copy of givenSquares) : This method plays a nought or a cross, depending on whose turn to play, at the indicated line and column
     private Square[][] play(int line, int column, Square[][] givenSquares)
     {
-        // First copy the grid
-        Square squares[][] = new Square[this.panel.getM()][this.panel.getM()];
-        for (int l = 0; l < this.panel.getM(); l++)
-        {
-            for (int c = 0; c < this.panel.getM(); c++)
-            {
-                Square s = new Square(givenSquares[l][c].getState());
-                squares[l][c] = s;
-            }
-        }
-        
         // If it's human's turn, put a cross
-        if (isHumanTurn(squares))
-            squares[line][column].setState("cross");
+        if (isHumanTurn(givenSquares))
+            givenSquares[line][column].setState("cross");
         // Else it's computer's turn, then put a nought
         else
-            squares[line][column].setState("nought");
+            givenSquares[line][column].setState("nought");
         
-        // Return the new grid
-        return squares;
+        return givenSquares;
     }
     
     // GRID METHOD (works directly on the givenSquares) : This method plays a nought or a cross, depending on whose turn to play, at the indicated line and column
@@ -525,15 +872,13 @@ public class Frame extends JFrame
     // Return true if the reached state corresponds to a leaf
     private boolean isLeaf(Square[][] node)
     {
-        Square squares[][] = node;
-        
         /* The actual game is a leaf if... */
         
         /* ...there is a complete LINE, COLUMN or DIAGONAL filled with the same type of chip */
         
-        // counter of crosses in a same diagonal (from Top Left to Bottom Right)
+        // counter of "crosses in a same diagonal" (from Top Left to Bottom Right)
         int diagonalCrossesCounter = 0;
-        // counter of noughts in a same diagonal
+        // counter of "noughts in a same diagonal"
         int diagonalNoughtsCounter = 0;
         for (int l = 0; l < this.panel.getM(); l++)
         {
@@ -552,24 +897,24 @@ public class Frame extends JFrame
             for (int c = 0; c < this.panel.getM(); c++)
             {
                 // If the square contains a cross
-                if (squares[l][c].getState().equals("cross"))
+                if (node[l][c].getState().equals("cross"))
                     horizontalCrossesCounter++;
                 // Or if it contains a nought
-                if (squares[l][c].getState().equals("nought"))
+                if (node[l][c].getState().equals("nought"))
                     horizontalNoughtsCounter++;
                 
                 // We then do the same for columns
-                if (squares[c][l].getState().equals("cross"))
+                if (node[c][l].getState().equals("cross"))
                     verticalCrossesCounter++;
-                if (squares[c][l].getState().equals("nought"))
+                if (node[c][l].getState().equals("nought"))
                     verticalNoughtsCounter++;
                 
                 // ... same thing for diagonals (from TOP LEFT to BOTTOM RIGHT)
                 if (l == c)
                 {
-                    if (squares[l][c].getState().equals("cross"))
+                    if (node[l][c].getState().equals("cross"))
                         diagonalCrossesCounter++;
-                    if (squares[l][c].getState().equals("nought"))
+                    if (node[l][c].getState().equals("nought"))
                         diagonalNoughtsCounter++;
                 }
             }
@@ -602,9 +947,9 @@ public class Frame extends JFrame
         
         for (int i = 0 ; i < this.panel.getM() ; i++)
         {
-            if (squares[i][this.panel.getM() - i - 1].getState().equals("cross"))
+            if (node[i][this.panel.getM() - i - 1].getState().equals("cross"))
                 diagonalCrossesCounter++;
-            if (squares[i][this.panel.getM() - i - 1].getState().equals("nought"))
+            if (node[i][this.panel.getM() - i - 1].getState().equals("nought"))
                 diagonalNoughtsCounter++;    
         }
         
@@ -623,14 +968,14 @@ public class Frame extends JFrame
             for (int c = 0; c < this.panel.getM(); c++)
             {
                 // If there is a remaining empty square
-                if (squares[l][c].getState().equals(""))
+                if (node[l][c].getState().equals(""))
                     // The game still goes on => not a leaf
                     unfilledCounter++;
             }
         }
         
         // It's a draw !
-        if (unfilledCounter == this.panel.getM())
+        if (unfilledCounter == 0)
             return true;
         
         // Else, it means it's NOT a leaf
@@ -640,8 +985,6 @@ public class Frame extends JFrame
     // Return the value that corresponds to the game result of a reached leaf
     private int f(Square[][] leaf)
     {
-        Square squares[][] = leaf;
-        
         /* Calculates f(leaf) when the actual game is a leaf if... */
         
         /* 
@@ -668,29 +1011,27 @@ public class Frame extends JFrame
             // ...and the number of noughts
             int verticalNoughtsCounter = 0;
             
-            
-            
             for (int c = 0; c < this.panel.getM(); c++)
             {
                 // If the square contains a cross
-                if (squares[l][c].getState().equals("cross"))
+                if (leaf[l][c].getState().equals("cross"))
                     horizontalCrossesCounter++;
                 // Or if it contains a nought
-                if (squares[l][c].getState().equals("nought"))
+                if (leaf[l][c].getState().equals("nought"))
                     horizontalNoughtsCounter++;
                 
                 // We then do the same for columns
-                if (squares[c][l].getState().equals("cross"))
+                if (leaf[c][l].getState().equals("cross"))
                     verticalCrossesCounter++;
-                if (squares[c][l].getState().equals("nought"))
+                if (leaf[c][l].getState().equals("nought"))
                     verticalNoughtsCounter++;
                 
                 // ... same thing for diagonals (from TOP LEFT to BOTTOM RIGHT)
                 if (l == c)
                 {
-                    if (squares[l][c].getState().equals("cross"))
+                    if (leaf[l][c].getState().equals("cross"))
                         diagonalCrossesCounter++;
-                    if (squares[l][c].getState().equals("nought"))
+                    if (leaf[l][c].getState().equals("nought"))
                         diagonalNoughtsCounter++;
                 }
             }
@@ -723,9 +1064,9 @@ public class Frame extends JFrame
         
         for (int i = 0 ; i < this.panel.getM() ; i++)
         {
-            if (squares[i][this.panel.getM() - i - 1].getState().equals("cross"))
+            if (leaf[i][this.panel.getM() - i - 1].getState().equals("cross"))
                 diagonalCrossesCounter++;
-            if (squares[i][this.panel.getM() - i - 1].getState().equals("nought"))
+            if (leaf[i][this.panel.getM() - i - 1].getState().equals("nought"))
                 diagonalNoughtsCounter++;    
         }
         
@@ -744,17 +1085,17 @@ public class Frame extends JFrame
             for (int c = 0; c < this.panel.getM(); c++)
             {
                 // If there is a remaining empty square
-                if (!squares[l][c].getState().equals(""))
+                if (leaf[l][c].getState().equals(""))
                     // The game still goes on => not a leaf
                     unfilledCounter++;
             }
         }
         
         // It's a draw !
-        if (unfilledCounter == sqr(this.panel.getM()))
+        if (unfilledCounter == 0)
             return 0;
         
-        // Else, it means it's NOT a leaf. 99 : Error => Calling f(node) for a node that is not a leaf
+        // Else, it means it's NOT a leaf. 99 : Error => Calling f(x) while x is not a leaf
         return 99;
     }
     
@@ -762,7 +1103,6 @@ public class Frame extends JFrame
     private int countXInGame(Square[][] givenSquares)
     {
         int counter = 0;
-        Square squares[][] = givenSquares;
         
         // For each line
         for (int l = 0; l < this.panel.getM(); l++)
@@ -771,7 +1111,7 @@ public class Frame extends JFrame
             for (int c = 0; c < this.panel.getM(); c++)
             {
                 // If you find a cross, then increment the counter
-                if (squares[l][c].getState().equals("cross"))
+                if (givenSquares[l][c].getState().equals("cross"))
                     counter++;
             }
         }
@@ -783,7 +1123,6 @@ public class Frame extends JFrame
     private int countOInGame(Square[][] givenSquares)
     {
         int counter = 0;
-        Square squares[][] = givenSquares;
         
         // For each line
         for (int l = 0; l < this.panel.getM(); l++)
@@ -792,7 +1131,7 @@ public class Frame extends JFrame
             for (int c = 0; c < this.panel.getM(); c++)
             {
                 // If you find a nought, then increment the counter
-                if (squares[l][c].getState().equals("nought"))
+                if (givenSquares[l][c].getState().equals("nought"))
                     counter++;
             }
         }
@@ -860,21 +1199,5 @@ public class Frame extends JFrame
         return max;
         }
         return 0;
-    }
-    
-    
-    
-    /*
-     * Getters and Setters
-     */
-    
-    public boolean isPlayed()
-    {
-        return played;
-    }
-
-    public void setPlayed(boolean played)
-    {
-        this.played = played;
     }
 }
