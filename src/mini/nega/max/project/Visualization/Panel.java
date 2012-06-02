@@ -20,13 +20,13 @@ public class Panel extends JPanel
      * Panel Attributes
      */
     
-    // m is the dimension of the board
+    /** m is the dimension of the board */
     private int m;
     
-    // Every button represents a square
+    /** Every button represents a square */
     private Square[][] squares;
     
-    // Panel's background image
+    /** Panel's background image */
     private Image img;
     
     
@@ -75,7 +75,7 @@ public class Panel extends JPanel
      * @Overrides
      */
     
-    // This is the paintComponent method that will be called each time a modification occurs in the panel
+    /** This is the paintComponent method that will be called each time a modification occurs in the panel */
     @Override
     public void paintComponent(Graphics g)
     {
@@ -91,7 +91,7 @@ public class Panel extends JPanel
      * Internal Methods
      */
     
-    // Calcultates the square of a number
+    /** Calcultates the square of a number */
     private int sqr(int m)
     {
         return (m * m);

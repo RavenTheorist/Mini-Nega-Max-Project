@@ -22,8 +22,9 @@ public class Square extends JButton implements MouseListener
      * Attributes
      */
     
-    // The state of the square, can be one of {"", "nought", "cross"}
+    /** The state of the square, can be one of {"", "nought", "cross"} */
     private String state;
+    /** Contains the background image of every square */
     private Image img;
     
     

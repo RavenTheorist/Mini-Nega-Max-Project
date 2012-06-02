@@ -14,7 +14,7 @@ public class MiniNegaMaxProject
     public static void main(String[] args)
     {
         // First argument : Dimension of the grid
-        // Second Argument : The Algorithm => Value must be one of : {"minmax", "bigminmax", "negamax"}
-        Frame f = new Frame(3, "BigMinMax");
+        // Second Argument : The Algorithm => Value must be one of : {"minmax", "bigminmax", "negamax", "alphabeta"}
+        Frame f = new Frame(5, "alphabeta");
     }
 }
